@@ -79,20 +79,6 @@
                   <span class="info-value">{{ tripPlan.overall_suggestions }}</span>
                 </div>
               </div>
-              <div class="quick-stats">
-                <div class="quick-stat">
-                  <span class="quick-stat-label">景点数</span>
-                  <span class="quick-stat-value">{{ tripStats.attractions }}</span>
-                </div>
-                <div class="quick-stat">
-                  <span class="quick-stat-label">餐饮点位</span>
-                  <span class="quick-stat-value">{{ tripStats.meals }}</span>
-                </div>
-                <div class="quick-stat">
-                  <span class="quick-stat-label">住宿晚数</span>
-                  <span class="quick-stat-value">{{ tripStats.hotelNights }}</span>
-                </div>
-              </div>
             </a-card>
 
             <!-- 预算明细 -->
@@ -340,22 +326,6 @@ const activeSection = ref('overview')
 const activeDays = ref<number[]>([0]) // 默认展开第一天
 let map: any = null
 
-const tripStats = computed(() => {
-  if (!tripPlan.value) {
-    return {
-      attractions: 0,
-      meals: 0,
-      hotelNights: 0
-    }
-  }
-
-  return {
-    attractions: tripPlan.value.days.reduce((sum, day) => sum + day.attractions.length, 0),
-    meals: tripPlan.value.days.reduce((sum, day) => sum + day.meals.length, 0),
-    hotelNights: tripPlan.value.days.filter(day => day.hotel?.name).length
-  }
-})
-
 const firstAttractionCenter = computed<[number, number] | null>(() => {
   if (!tripPlan.value) {
     return null
@@ -376,9 +346,7 @@ onMounted(async () => {
   const data = sessionStorage.getItem('tripPlan')
   if (data) {
     tripPlan.value = JSON.parse(data)
-    // 加载景点图片
     await loadAttractionPhotos()
-    // 等待DOM渲染完成后初始化地图
     await nextTick()
     initMap()
   }
@@ -400,7 +368,6 @@ const scrollToSection = ({ key }: { key: string }) => {
 // 切换编辑模式
 const toggleEditMode = () => {
   editMode.value = true
-  // 保存原始数据用于取消编辑
   originalPlan.value = JSON.parse(JSON.stringify(tripPlan.value))
   message.info('进入编辑模式')
 }
@@ -408,13 +375,11 @@ const toggleEditMode = () => {
 // 保存修改
 const saveChanges = () => {
   editMode.value = false
-  // 更新sessionStorage
   if (tripPlan.value) {
     sessionStorage.setItem('tripPlan', JSON.stringify(tripPlan.value))
   }
   message.success('修改已保存')
 
-  // 重新初始化地图以反映更改
   if (map) {
     map.destroy()
   }
@@ -470,7 +435,6 @@ const getMealLabel = (type: string): string => {
   return labels[type] || type
 }
 
-// 加载所有景点图片
 const loadAttractionPhotos = async () => {
   if (!tripPlan.value) return
 
@@ -495,14 +459,11 @@ const loadAttractionPhotos = async () => {
   await Promise.all(promises)
 }
 
-// 获取景点图片
 const getAttractionImage = (name: string, index: number): string => {
-  // 如果已加载真实图片,返回真实图片
   if (attractionPhotos.value[name]) {
     return attractionPhotos.value[name]
   }
 
-  // 返回一个纯色占位图(避免跨域问题)
   const colors = [
     { start: '#667eea', end: '#764ba2' },
     { start: '#f093fb', end: '#f5576c' },
@@ -513,7 +474,6 @@ const getAttractionImage = (name: string, index: number): string => {
   const colorIndex = index % colors.length
   const { start, end } = colors[colorIndex]
 
-  // 使用base64编码避免中文问题
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">
     <defs>
       <linearGradient id="grad${index}" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -528,14 +488,10 @@ const getAttractionImage = (name: string, index: number): string => {
   return `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
 }
 
-// 图片加载失败时的处理
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
-  // 使用灰色占位图
   img.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect width="400" height="300" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18" fill="%23999"%3E图片加载失败%3C/text%3E%3C/svg%3E'
 }
-
-
 
 // 导出为图片
 const exportAsImage = async () => {
@@ -547,16 +503,13 @@ const exportAsImage = async () => {
       throw new Error('未找到内容元素')
     }
 
-    // 创建一个独立的容器
     const exportContainer = document.createElement('div')
     exportContainer.style.width = element.offsetWidth + 'px'
     exportContainer.style.backgroundColor = '#f5f7fa'
     exportContainer.style.padding = '20px'
 
-    // 复制所有内容
     exportContainer.innerHTML = element.innerHTML
 
-    // 处理地图截图
     const mapContainer = document.getElementById('amap-container')
     if (mapContainer && map) {
       const mapCanvas = mapContainer.querySelector('canvas')
@@ -569,12 +522,11 @@ const exportAsImage = async () => {
       }
     }
 
-    // 移除所有ant-card类,替换为纯div
     const cards = exportContainer.querySelectorAll('.ant-card')
     cards.forEach((card) => {
       const cardEl = card as HTMLElement
       try {
-        cardEl.className = '' // 移除所有类
+        cardEl.className = ''
         cardEl.style.setProperty('background-color', '#ffffff')
         cardEl.style.setProperty('border-radius', '12px')
         cardEl.style.setProperty('box-shadow', '0 4px 12px rgba(0, 0, 0, 0.1)')
@@ -585,7 +537,6 @@ const exportAsImage = async () => {
       }
     })
 
-    // 处理卡片头部
     const cardHeads = exportContainer.querySelectorAll('.ant-card-head')
     cardHeads.forEach((head) => {
       const headEl = head as HTMLElement
@@ -600,7 +551,6 @@ const exportAsImage = async () => {
       }
     })
 
-    // 处理卡片内容
     const cardBodies = exportContainer.querySelectorAll('.ant-card-body')
     cardBodies.forEach((body) => {
       const bodyEl = body as HTMLElement
@@ -608,7 +558,6 @@ const exportAsImage = async () => {
       bodyEl.style.setProperty('padding', '24px')
     })
 
-    // 处理酒店卡片头部
     const hotelCards = exportContainer.querySelectorAll('.hotel-card')
     hotelCards.forEach((card) => {
       const head = card.querySelector('.ant-card-head') as HTMLElement
@@ -618,13 +567,11 @@ const exportAsImage = async () => {
       (card as HTMLElement).style.setProperty('background-color', '#e3f2fd')
     })
 
-    // 处理天气卡片
     const weatherCards = exportContainer.querySelectorAll('.weather-card')
     weatherCards.forEach((card) => {
       (card as HTMLElement).style.setProperty('background-color', '#e0f7fa')
     })
 
-    // 处理预算总计
     const budgetTotal = exportContainer.querySelector('.budget-total')
     if (budgetTotal) {
       const el = budgetTotal as HTMLElement
@@ -635,7 +582,6 @@ const exportAsImage = async () => {
       el.style.setProperty('margin-bottom', '20px')
     }
 
-    // 处理预算项
     const budgetItems = exportContainer.querySelectorAll('.budget-item')
     budgetItems.forEach((item) => {
       const el = item as HTMLElement
@@ -645,7 +591,6 @@ const exportAsImage = async () => {
       el.style.setProperty('margin-bottom', '12px')
     })
 
-    // 添加到body(隐藏)
     exportContainer.style.position = 'absolute'
     exportContainer.style.left = '-9999px'
     document.body.appendChild(exportContainer)
@@ -658,10 +603,8 @@ const exportAsImage = async () => {
       allowTaint: true
     })
 
-    // 移除容器
     document.body.removeChild(exportContainer)
 
-    // 转换为图片并下载
     const link = document.createElement('a')
     link.download = `旅行计划_${tripPlan.value?.city}_${new Date().getTime()}.png`
     link.href = canvas.toDataURL('image/png')
@@ -684,16 +627,13 @@ const exportAsPDF = async () => {
       throw new Error('未找到内容元素')
     }
 
-    // 创建一个独立的容器
     const exportContainer = document.createElement('div')
     exportContainer.style.width = element.offsetWidth + 'px'
     exportContainer.style.backgroundColor = '#f5f7fa'
     exportContainer.style.padding = '20px'
 
-    // 复制所有内容
     exportContainer.innerHTML = element.innerHTML
 
-    // 处理地图截图
     const mapContainer = document.getElementById('amap-container')
     if (mapContainer && map) {
       const mapCanvas = mapContainer.querySelector('canvas')
@@ -706,7 +646,6 @@ const exportAsPDF = async () => {
       }
     }
 
-    // 移除所有ant-card类,替换为纯div
     const cards = exportContainer.querySelectorAll('.ant-card')
     cards.forEach((card) => {
       const cardEl = card as HTMLElement
@@ -722,7 +661,6 @@ const exportAsPDF = async () => {
       }
     })
 
-    // 处理卡片头部
     const cardHeads = exportContainer.querySelectorAll('.ant-card-head')
     cardHeads.forEach((head) => {
       const headEl = head as HTMLElement
@@ -737,7 +675,6 @@ const exportAsPDF = async () => {
       }
     })
 
-    // 处理卡片内容
     const cardBodies = exportContainer.querySelectorAll('.ant-card-body')
     cardBodies.forEach((body) => {
       const bodyEl = body as HTMLElement
@@ -745,7 +682,6 @@ const exportAsPDF = async () => {
       bodyEl.style.setProperty('padding', '24px')
     })
 
-    // 处理酒店卡片头部
     const hotelCards = exportContainer.querySelectorAll('.hotel-card')
     hotelCards.forEach((card) => {
       const head = card.querySelector('.ant-card-head') as HTMLElement
@@ -755,13 +691,11 @@ const exportAsPDF = async () => {
       (card as HTMLElement).style.setProperty('background-color', '#e3f2fd')
     })
 
-    // 处理天气卡片
     const weatherCards = exportContainer.querySelectorAll('.weather-card')
     weatherCards.forEach((card) => {
       (card as HTMLElement).style.setProperty('background-color', '#e0f7fa')
     })
 
-    // 处理预算总计
     const budgetTotal = exportContainer.querySelector('.budget-total')
     if (budgetTotal) {
       const el = budgetTotal as HTMLElement
@@ -772,7 +706,6 @@ const exportAsPDF = async () => {
       el.style.setProperty('margin-bottom', '20px')
     }
 
-    // 处理预算项
     const budgetItems = exportContainer.querySelectorAll('.budget-item')
     budgetItems.forEach((item) => {
       const el = item as HTMLElement
@@ -782,7 +715,6 @@ const exportAsPDF = async () => {
       el.style.setProperty('margin-bottom', '12px')
     })
 
-    // 添加到body(隐藏)
     exportContainer.style.position = 'absolute'
     exportContainer.style.left = '-9999px'
     document.body.appendChild(exportContainer)
@@ -795,7 +727,6 @@ const exportAsPDF = async () => {
       allowTaint: true
     })
 
-    // 移除容器
     document.body.removeChild(exportContainer)
 
     const imgData = canvas.toDataURL('image/png')
@@ -805,15 +736,14 @@ const exportAsPDF = async () => {
       format: 'a4'
     })
 
-    const imgWidth = 210 // A4宽度(mm)
+    const imgWidth = 210
     const imgHeight = (canvas.height * imgWidth) / canvas.width
 
-    // 如果内容高度超过一页,分页处理
     let heightLeft = imgHeight
     let position = 0
 
     pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= 297 // A4高度
+    heightLeft -= 297
 
     while (heightLeft > 0) {
       position = heightLeft - imgHeight
@@ -831,66 +761,21 @@ const exportAsPDF = async () => {
   }
 }
 
-// 截取地图图片
-const captureMapImage = async () => {
-  if (!map) return
-
-  try {
-    // 获取地图容器
-    const mapContainer = document.getElementById('amap-container')
-    if (!mapContainer) return
-
-    // 使用高德地图的截图功能
-    const mapCanvas = mapContainer.querySelector('canvas')
-    if (mapCanvas) {
-      // 创建一个img元素替换地图容器
-      const img = document.createElement('img')
-      img.src = mapCanvas.toDataURL('image/png')
-      img.style.width = '100%'
-      img.style.height = '500px'
-      img.style.objectFit = 'cover'
-      img.id = 'map-snapshot'
-
-      // 隐藏原地图,显示截图
-      mapContainer.style.display = 'none'
-      mapContainer.parentElement?.appendChild(img)
-    }
-  } catch (error) {
-    console.error('截取地图失败:', error)
-  }
-}
-
-// 恢复地图
-const restoreMap = () => {
-  const mapContainer = document.getElementById('amap-container')
-  const snapshot = document.getElementById('map-snapshot')
-
-  if (mapContainer) {
-    mapContainer.style.display = 'block'
-  }
-
-  if (snapshot) {
-    snapshot.remove()
-  }
-}
-
 // 初始化地图
 const initMap = async () => {
   try {
     const AMap = await AMapLoader.load({
-      key: import.meta.env.VITE_AMAP_WEB_JS_KEY,  // 高德地图Web端(JS API) Key
+      key: import.meta.env.VITE_AMAP_WEB_JS_KEY,
       version: '2.0',
       plugins: ['AMap.Marker', 'AMap.Polyline', 'AMap.InfoWindow']
     })
 
-    // 创建地图实例
     map = new AMap.Map('amap-container', {
       zoom: 12,
       center: firstAttractionCenter.value || [116.397128, 39.916527],
       viewMode: '3D'
     })
 
-    // 添加景点标记
     addAttractionMarkers(AMap)
 
     message.success('地图加载成功')
@@ -900,14 +785,12 @@ const initMap = async () => {
   }
 }
 
-// 添加景点标记
 const addAttractionMarkers = (AMap: any) => {
   if (!tripPlan.value) return
 
   const markers: any[] = []
   const allAttractions: any[] = []
 
-  // 收集所有景点
   tripPlan.value.days.forEach((day, dayIndex) => {
     day.attractions.forEach((attraction, attrIndex) => {
       if (attraction.location && attraction.location.longitude && attraction.location.latitude) {
@@ -920,7 +803,6 @@ const addAttractionMarkers = (AMap: any) => {
     })
   })
 
-  // 创建标记
   allAttractions.forEach((attraction, index) => {
     const marker = new AMap.Marker({
       position: [attraction.location.longitude, attraction.location.latitude],
@@ -931,7 +813,6 @@ const addAttractionMarkers = (AMap: any) => {
       }
     })
 
-    // 创建信息窗口
     const infoWindow = new AMap.InfoWindow({
       content: `
         <div style="padding: 10px;">
@@ -945,7 +826,6 @@ const addAttractionMarkers = (AMap: any) => {
       offset: new AMap.Pixel(0, -30)
     })
 
-    // 点击标记显示信息窗口
     marker.on('click', () => {
       infoWindow.open(map, marker.getPosition())
     })
@@ -953,23 +833,18 @@ const addAttractionMarkers = (AMap: any) => {
     markers.push(marker)
   })
 
-  // 添加标记到地图
   map.add(markers)
 
-  // 自动调整视野以包含所有标记
   if (allAttractions.length > 0) {
     map.setFitView(markers)
   }
 
-  // 绘制路线
   drawRoutes(AMap, allAttractions)
 }
 
-// 绘制路线
 const drawRoutes = (AMap: any, attractions: any[]) => {
   if (attractions.length < 2) return
 
-  // 按天分组绘制路线
   const dayGroups: any = {}
   attractions.forEach(attr => {
     if (!dayGroups[attr.dayIndex]) {
@@ -978,7 +853,6 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
     dayGroups[attr.dayIndex].push(attr)
   })
 
-  // 为每天的景点绘制路线
   Object.values(dayGroups).forEach((dayAttractions: any) => {
     if (dayAttractions.length < 2) return
 
@@ -993,7 +867,7 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
       strokeWeight: 4,
       strokeOpacity: 0.8,
       strokeStyle: 'solid',
-      showDir: true // 显示方向箭头
+      showDir: true
     })
 
     map.add(polyline)
@@ -1228,33 +1102,6 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.quick-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-top: 18px;
-}
-
-.quick-stat {
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(26, 107, 112, 0.08), rgba(15, 63, 73, 0.14));
-  border: 1px solid rgba(26, 107, 112, 0.14);
-}
-
-.quick-stat-label {
-  display: block;
-  font-size: 12px;
-  color: #6a7784;
-  margin-bottom: 8px;
-}
-
-.quick-stat-value {
-  font-size: 24px;
-  font-weight: 700;
-  color: #0f3f49;
 }
 
 .info-item {
@@ -1502,8 +1349,5 @@ const drawRoutes = (AMap: any, attractions: any[]) => {
     gap: 16px;
   }
 
-  .quick-stats {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

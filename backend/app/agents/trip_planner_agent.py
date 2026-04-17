@@ -164,7 +164,6 @@ class MultiAgentTripPlanner:
         try:
             self.llm = get_llm()
 
-            # 保留原来的共享MCP思路，但改成真正复用 service 层的单例实例。
             print("  - 复用共享MCP工具...")
             self.amap_tool = get_amap_mcp_tool()
 
@@ -346,7 +345,7 @@ class MultiAgentTripPlanner:
             return self._create_fallback_plan(request)
 
     def _normalize_plan_data(self, data: Dict[str, Any], request: TripRequest) -> Dict[str, Any]:
-        """对大模型返回结果做一次后处理，保证前端可直接消费"""
+        """对模型返回结果进行标准化处理"""
         normalized = dict(data)
         normalized["city"] = normalized.get("city") or request.city
         normalized["start_date"] = normalized.get("start_date") or request.start_date
@@ -361,7 +360,7 @@ class MultiAgentTripPlanner:
         return normalized
 
     def _normalize_days(self, days: Any, request: TripRequest) -> List[Dict[str, Any]]:
-        """补齐每天的必备字段，避免前端编辑/导出时报错"""
+        """补齐每日行程字段"""
         if not isinstance(days, list) or not days:
             return [day.model_dump() for day in self._create_fallback_plan(request).days]
 
@@ -380,7 +379,7 @@ class MultiAgentTripPlanner:
                         "address": f"{request.city}市区待补充",
                         "location": {"longitude": 116.4 + index * 0.01, "latitude": 39.9 + index * 0.01},
                         "visit_duration": 120,
-                        "description": "这里保留了原始兜底策略，避免前端没有景点可展示。",
+                        "description": f"{request.city}景点推荐",
                         "category": "景点",
                         "ticket_price": 0,
                     }
@@ -457,7 +456,7 @@ class MultiAgentTripPlanner:
         return normalized_weather
 
     def _normalize_budget(self, budget: Any, days: List[Dict[str, Any]], request: TripRequest) -> Dict[str, int]:
-        """预算兜底，避免模型漏掉 budget 字段"""
+        """汇总预算字段"""
         total_attractions = sum(
             int(attraction.get("ticket_price") or 0)
             for day in days
@@ -493,7 +492,7 @@ class MultiAgentTripPlanner:
         }
 
     def _estimate_transportation_budget(self, request: TripRequest) -> int:
-        """根据出行方式给一个简化版城市内交通估算"""
+        """按交通方式估算城市内交通费用"""
         base_map = {
             "步行": 20,
             "公共交通": 40,

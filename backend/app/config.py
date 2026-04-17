@@ -11,7 +11,6 @@ CURRENT_FILE = Path(__file__).resolve()
 BACKEND_ROOT = CURRENT_FILE.parents[1]
 PROJECT_ROOT = CURRENT_FILE.parents[2]
 
-# 保留原来“多处兜底加载”的思路，但把路径收敛到当前项目。
 load_dotenv(BACKEND_ROOT / ".env")
 load_dotenv(PROJECT_ROOT / ".env", override=False)
 load_dotenv(override=False)

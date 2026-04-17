@@ -11,7 +11,7 @@
         <router-view />
       </a-layout-content>
       <a-layout-footer class="app-footer">
-        整理版项目仓库，保留多 Agent 协作流程与地图能力接入链路
+        HelloAgents 智能旅行助手
       </a-layout-footer>
     </a-layout>
   </div>

@@ -13,21 +13,10 @@
         <span class="icon">✈️</span>
       </div>
       <h1 class="page-title">智能旅行助手</h1>
-      <p class="page-subtitle">基于多 Agent 协作的个性化旅行规划,把目的地、天气、住宿和预算串成一条完整链路</p>
-      <div class="header-actions">
-        <a-button ghost size="large" class="ghost-action" @click="resetForm">
-          清空当前草稿
-        </a-button>
-      </div>
+      <p class="page-subtitle">基于多智能体协作的旅行规划系统</p>
     </div>
 
     <a-card class="form-card" :bordered="false">
-      <a-alert
-        type="info"
-        show-icon
-        class="draft-alert"
-        message="填写内容会自动暂存在当前浏览器会话里，刷新页面后也可以继续编辑。"
-      />
       <a-form
         :model="formData"
         layout="vertical"
@@ -215,8 +204,7 @@
 </template>
 
 <script setup lang="ts">
-import dayjs from 'dayjs'
-import { onMounted, reactive, ref, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import { generateTripPlan } from '@/services/api'
@@ -227,7 +215,6 @@ const router = useRouter()
 const loading = ref(false)
 const loadingProgress = ref(0)
 const loadingStatus = ref('')
-const STORAGE_KEY = 'trip-form-draft'
 
 const formData = reactive<TripFormData & { start_date: Dayjs | null; end_date: Dayjs | null }>({
   city: '',
@@ -238,56 +225,6 @@ const formData = reactive<TripFormData & { start_date: Dayjs | null; end_date: D
   accommodation: '经济型酒店',
   preferences: [],
   free_text_input: ''
-})
-
-const serializeDraft = () => ({
-  city: formData.city,
-  start_date: formData.start_date ? formData.start_date.format('YYYY-MM-DD') : null,
-  end_date: formData.end_date ? formData.end_date.format('YYYY-MM-DD') : null,
-  travel_days: formData.travel_days,
-  transportation: formData.transportation,
-  accommodation: formData.accommodation,
-  preferences: [...formData.preferences],
-  free_text_input: formData.free_text_input
-})
-
-const persistDraft = () => {
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(serializeDraft()))
-}
-
-const resetForm = () => {
-  formData.city = ''
-  formData.start_date = null
-  formData.end_date = null
-  formData.travel_days = 1
-  formData.transportation = '公共交通'
-  formData.accommodation = '经济型酒店'
-  formData.preferences = []
-  formData.free_text_input = ''
-  sessionStorage.removeItem(STORAGE_KEY)
-  message.success('已清空草稿')
-}
-
-onMounted(() => {
-  const savedDraft = sessionStorage.getItem(STORAGE_KEY)
-  if (!savedDraft) {
-    return
-  }
-
-  try {
-    const parsed = JSON.parse(savedDraft)
-    formData.city = parsed.city || ''
-    formData.start_date = parsed.start_date ? dayjs(parsed.start_date) : null
-    formData.end_date = parsed.end_date ? dayjs(parsed.end_date) : null
-    formData.travel_days = parsed.travel_days || 1
-    formData.transportation = parsed.transportation || '公共交通'
-    formData.accommodation = parsed.accommodation || '经济型酒店'
-    formData.preferences = parsed.preferences || []
-    formData.free_text_input = parsed.free_text_input || ''
-  } catch (error) {
-    console.error('恢复草稿失败:', error)
-    sessionStorage.removeItem(STORAGE_KEY)
-  }
 })
 
 // 监听日期变化,自动计算旅行天数
@@ -305,22 +242,6 @@ watch([() => formData.start_date, () => formData.end_date], ([start, end]) => {
     }
   }
 })
-
-watch(
-  [
-    () => formData.city,
-    () => formData.start_date?.format('YYYY-MM-DD') || '',
-    () => formData.end_date?.format('YYYY-MM-DD') || '',
-    () => formData.travel_days,
-    () => formData.transportation,
-    () => formData.accommodation,
-    () => formData.preferences.join('|'),
-    () => formData.free_text_input
-  ],
-  () => {
-    persistDraft()
-  }
-)
 
 const handleSubmit = async () => {
   if (!formData.start_date || !formData.end_date) {
@@ -369,9 +290,7 @@ const handleSubmit = async () => {
     loadingStatus.value = '✅ 完成!'
 
     if (response.success && response.data) {
-      // 保存到sessionStorage
       sessionStorage.setItem('tripPlan', JSON.stringify(response.data))
-      sessionStorage.removeItem(STORAGE_KEY)
 
       message.success('旅行计划生成成功!')
 
@@ -499,15 +418,6 @@ const handleSubmit = async () => {
   font-weight: 300;
 }
 
-.header-actions {
-  margin-top: 20px;
-}
-
-.ghost-action {
-  border-color: rgba(255, 255, 255, 0.7);
-  color: #fff;
-}
-
 /* 表单卡片 */
 .form-card {
   max-width: 1400px;
@@ -519,11 +429,6 @@ const handleSubmit = async () => {
   z-index: 1;
   backdrop-filter: blur(10px);
   background: rgba(255, 255, 255, 0.98) !important;
-}
-
-.draft-alert {
-  margin-bottom: 24px;
-  border-radius: 14px;
 }
 
 /* 表单分区 */

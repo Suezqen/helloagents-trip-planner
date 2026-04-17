@@ -66,7 +66,7 @@ class AmapService:
         return len(self.available_tool_names())
 
     def _call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
-        """统一封装MCP工具调用，保留原始返回方便后续调试"""
+        """统一封装MCP工具调用"""
         return self.mcp_tool.run({
             "action": "call_tool",
             "tool_name": tool_name,
@@ -95,9 +95,6 @@ class AmapService:
                 }
             )
             
-            # 解析结果
-            # 注意: MCP工具返回的是字符串,需要解析
-            # 这里简化处理,实际应该解析JSON
             print(f"POI搜索结果: {result[:200]}...")  # 打印前200字符
             
             # TODO: 解析实际的POI数据

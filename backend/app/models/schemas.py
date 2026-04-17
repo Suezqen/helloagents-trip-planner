@@ -63,7 +63,6 @@ class TripRequest(BaseModel):
         if actual_days > 30:
             raise ValueError("旅行天数不能超过30天")
 
-        # 前端会实时计算天数，后端这里再做一次兜底同步。
         self.travel_days = actual_days
         return self
 
